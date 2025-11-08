@@ -1,0 +1,89 @@
+CREATE DATABASE customer;
+USE customer;
+
+CREATE TABLE cust_tab (
+id INT PRIMARY KEY,
+name VARCHAR(20) NOT NULL,
+quantity INT CHECK (quantity > 0),
+price INT CHECK (price > 0),
+item VARCHAR(20)
+);
+
+CREATE TABLE cust_info (
+id INT,
+name VARCHAR(20),
+address VARCHAR(20),
+mobile VARCHAR(15),
+FOREIGN KEY (id) REFERENCES cust_tab(id)
+);
+
+INSERT INTO cust_tab VALUES
+(1,'Ram',1,15,'Milk'),
+(2,'Soham',2,20,'Toast'),
+(3,'Mohan',4,5,'Parle-G'),
+(4,'Om',2,20,'Coca Cola');
+
+SELECT * FROM cust_tab;
+
+ALTER TABLE cust_tab ADD totalprice INT;
+
+UPDATE cust_tab SET totalprice = quantity * price;
+
+SELECT * FROM cust_tab;
+
+INSERT INTO cust_info VALUES
+(1,'Ram','Pune','9943569081'),
+(2,'Soham','Pune','9978491281'),
+(3,'Mohan','Nashik','8782356712'),
+(4,'Om','Nagpur','7823450189');
+
+SELECT * FROM cust_info;
+
+SELECT
+cust_tab.id,
+cust_tab.name,
+cust_tab.item,
+cust_info.address
+FROM cust_tab
+INNER JOIN cust_info
+ON cust_tab.id = cust_info.id;
+
+SELECT
+cust_tab.id,
+cust_tab.name,
+cust_tab.item,
+cust_info.address
+FROM cust_tab
+LEFT JOIN cust_info
+ON cust_tab.id = cust_info.id;
+
+SELECT
+cust_tab.id,
+cust_tab.name,
+cust_tab.item,
+cust_info.address
+FROM cust_tab
+RIGHT JOIN cust_info
+ON cust_tab.id = cust_info.id;
+
+SELECT * FROM cust_tab
+WHERE totalprice = (SELECT MAX(totalprice) FROM cust_tab);
+
+SELECT * FROM cust_tab
+WHERE totalprice > (SELECT AVG(totalprice) FROM cust_tab);
+
+SELECT SUM(totalprice) AS Total_Sales FROM cust_tab;
+
+CREATE VIEW cust_view AS
+SELECT c.id, c.name, c.item, i.address, c.totalprice
+FROM cust_tab c
+INNER JOIN cust_info i ON c.id = i.id;
+
+SELECT * FROM cust_view;
+
+UPDATE cust_info SET address = 'Mumbai' WHERE id = 4;
+
+DELETE FROM cust_tab WHERE id = 3;
+
+SELECT * FROM cust_tab;
+SELECT * FROM cust_info;
