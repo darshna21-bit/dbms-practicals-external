@@ -1,0 +1,49 @@
+CREATE TABLE O_RollCall (
+    Roll_No INT PRIMARY KEY,
+    Name VARCHAR2(30),
+    Attendance VARCHAR2(10)
+);
+
+CREATE TABLE N_RollCall (
+    Roll_No INT PRIMARY KEY,
+    Name VARCHAR2(30),
+    Attendance VARCHAR2(10)
+);
+
+INSERT INTO O_RollCall VALUES (1, 'Ravi', 'Present');
+INSERT INTO O_RollCall VALUES (2, 'Soham', 'Absent');
+INSERT INTO O_RollCall VALUES (3, 'Mohan', 'Present');
+
+INSERT INTO N_RollCall VALUES (2, 'Soham', 'Absent');
+INSERT INTO N_RollCall VALUES (3, 'Mohan', 'Present');
+INSERT INTO N_RollCall VALUES (4, 'Omkar', 'Present');
+INSERT INTO N_RollCall VALUES (5, 'Raj', 'Absent');
+
+SET SERVEROUTPUT ON;
+DECLARE
+    CURSOR cur_roll(p_roll N_RollCall.Roll_No%TYPE) IS
+        SELECT Roll_No, Name, Attendance
+        FROM N_RollCall
+        WHERE Roll_No = p_roll;
+
+    v_roll N_RollCall.Roll_No%TYPE;
+    v_name N_RollCall.Name%TYPE;
+    v_att  N_RollCall.Attendance%TYPE;
+BEGIN
+    FOR rec IN (SELECT Roll_No FROM N_RollCall) LOOP
+        SELECT COUNT(*) INTO v_roll FROM O_RollCall WHERE Roll_No = rec.Roll_No;
+        IF v_roll = 0 THEN
+            OPEN cur_roll(rec.Roll_No);
+            FETCH cur_roll INTO v_roll, v_name, v_att;
+            INSERT INTO O_RollCall VALUES (v_roll, v_name, v_att);
+            CLOSE cur_roll;
+            DBMS_OUTPUT.PUT_LINE('Inserted Roll No: ' || v_roll || ' Name: ' || v_name);
+        ELSE
+            DBMS_OUTPUT.PUT_LINE('Skipped Roll No: ' || rec.Roll_No || ' (Already Exists)');
+        END IF;
+    END LOOP;
+    COMMIT;
+END;
+/
+
+SELECT * FROM O_RollCall;
