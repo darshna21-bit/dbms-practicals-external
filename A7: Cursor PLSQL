@@ -1,0 +1,78 @@
+CREATE DATABASE lib;
+\c lib
+
+CREATE TABLE library (
+    bno INT,
+    bname VARCHAR(40),
+    author VARCHAR(20),
+    allowed_days INT
+);
+
+CREATE TABLE library_audit (
+    bno INT,
+    old_allowed_days INT,
+    new_allowed_days INT,
+    operation_type VARCHAR(10)
+);
+
+INSERT INTO library VALUES
+(1,'Database Systems','Connally T',10),
+(2,'System Programming','John Donovan',20),
+(3,'Computer Network & Internet','Douglas E. Comer',18),
+(4,'Agile Project Management','Ken Schwaber',24),
+(5,'Python for Data Analysis','Wes McKinney',12);
+
+CREATE OR REPLACE FUNCTION trg_library_audit()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' THEN
+        INSERT INTO library_audit
+        VALUES (NEW.bno, OLD.allowed_days, NEW.allowed_days, 'UPDATE');
+        RETURN NEW;
+    ELSIF TG_OP = 'DELETE' THEN
+        INSERT INTO library_audit
+        VALUES (OLD.bno, OLD.allowed_days, NULL, 'DELETE');
+        RETURN OLD;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_before_update
+BEFORE UPDATE ON library
+FOR EACH ROW
+EXECUTE FUNCTION trg_library_audit();
+
+CREATE TRIGGER trg_after_delete
+AFTER DELETE ON library
+FOR EACH ROW
+EXECUTE FUNCTION trg_library_audit();
+
+CREATE OR REPLACE FUNCTION trg_statement_log()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'A % statement was executed on the library table.', TG_OP;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_stmt_before_update
+BEFORE UPDATE ON library
+FOR EACH STATEMENT
+EXECUTE FUNCTION trg_statement_log();
+
+CREATE TRIGGER trg_stmt_after_delete
+AFTER DELETE ON library
+FOR EACH STATEMENT
+EXECUTE FUNCTION trg_statement_log();
+
+UPDATE library SET allowed_days = 15 WHERE bno = 1;
+UPDATE library SET allowed_days = 25 WHERE bno = 2;
+UPDATE library SET allowed_days = 13 WHERE bno = 3;
+UPDATE library SET allowed_days = 19 WHERE bno = 4;
+UPDATE library SET allowed_days = 17 WHERE bno = 5;
+
+DELETE FROM library WHERE bno = 3;
+
+SELECT * FROM library;
+
+SELECT * FROM library_audit;
