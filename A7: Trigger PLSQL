@@ -1,78 +1,73 @@
-CREATE DATABASE lib;
-\c lib
+-- Drop old tables if exist
+Drop Table If Exists library_audit;
+Drop Table If Exists library;
 
-CREATE TABLE library (
-    bno INT,
-    bname VARCHAR(40),
-    author VARCHAR(20),
-    allowed_days INT
+-- Create main table
+Create Table library (
+    bookid Int Primary Key,
+    bookname Varchar(50),
+    author Varchar(50),
+    price Int
 );
 
-CREATE TABLE library_audit (
-    bno INT,
-    old_allowed_days INT,
-    new_allowed_days INT,
-    operation_type VARCHAR(10)
+-- Create audit table
+Create Table library_audit (
+    action_type Varchar(10),
+    old_bookid Int,
+    old_bookname Varchar(50),
+    old_author Varchar(50),
+    old_price Int,
+    action_time Timestamp Default Current_Timestamp
 );
 
-INSERT INTO library VALUES
-(1,'Database Systems','Connally T',10),
-(2,'System Programming','John Donovan',20),
-(3,'Computer Network & Internet','Douglas E. Comer',18),
-(4,'Agile Project Management','Ken Schwaber',24),
-(5,'Python for Data Analysis','Wes McKinney',12);
+-- Insert sample data
+Insert Into library Values
+(1, 'dbms', 'navathe', 500),
+(2, 'dsa', 'lipschutz', 400);
 
-CREATE OR REPLACE FUNCTION trg_library_audit()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF TG_OP = 'UPDATE' THEN
-        INSERT INTO library_audit
-        VALUES (NEW.bno, OLD.allowed_days, NEW.allowed_days, 'UPDATE');
-        RETURN NEW;
-    ELSIF TG_OP = 'DELETE' THEN
-        INSERT INTO library_audit
-        VALUES (OLD.bno, OLD.allowed_days, NULL, 'DELETE');
-        RETURN OLD;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
+-- Trigger function for AFTER trigger
+Create Or Replace Function library_after_trigger_fn()
+Returns Trigger
+As $$
+Begin
+    If (Tg_Op = 'UPDATE') Then
+        Insert Into library_audit(action_type, old_bookid, old_bookname, old_author, old_price)
+        Values ('update', Old.bookid, Old.bookname, Old.author, Old.price);
+    Elsif (Tg_Op = 'DELETE') Then
+        Insert Into library_audit(action_type, old_bookid, old_bookname, old_author, old_price)
+        Values ('delete', Old.bookid, Old.bookname, Old.author, Old.price);
+    End If;
+    Return Null;
+End;
+$$ Language plpgsql;
 
-CREATE TRIGGER trg_before_update
-BEFORE UPDATE ON library
-FOR EACH ROW
-EXECUTE FUNCTION trg_library_audit();
+-- AFTER trigger (fires after update or delete)
+Create Trigger library_after_trigger
+After Update Or Delete On library
+For Each Row
+Execute Function library_after_trigger_fn();
 
-CREATE TRIGGER trg_after_delete
-AFTER DELETE ON library
-FOR EACH ROW
-EXECUTE FUNCTION trg_library_audit();
 
-CREATE OR REPLACE FUNCTION trg_statement_log()
-RETURNS TRIGGER AS $$
-BEGIN
-    RAISE NOTICE 'A % statement was executed on the library table.', TG_OP;
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
+-- BEFORE trigger example (just displays a message)
+Create Or Replace Function library_before_trigger_fn()
+Returns Trigger
+As $$
+Begin
+    Raise Notice 'Before % on Book ID: %', Tg_Op, New.bookid;
+    Return New;
+End;
+$$ Language plpgsql;
 
-CREATE TRIGGER trg_stmt_before_update
-BEFORE UPDATE ON library
-FOR EACH STATEMENT
-EXECUTE FUNCTION trg_statement_log();
+-- BEFORE trigger (fires before update)
+Create Trigger library_before_trigger
+Before Update On library
+For Each Row
+Execute Function library_before_trigger_fn();
 
-CREATE TRIGGER trg_stmt_after_delete
-AFTER DELETE ON library
-FOR EACH STATEMENT
-EXECUTE FUNCTION trg_statement_log();
+-- Try update and delete
+Update library Set price = 550 Where bookid = 1;
+Delete From library Where bookid = 2;
 
-UPDATE library SET allowed_days = 15 WHERE bno = 1;
-UPDATE library SET allowed_days = 25 WHERE bno = 2;
-UPDATE library SET allowed_days = 13 WHERE bno = 3;
-UPDATE library SET allowed_days = 19 WHERE bno = 4;
-UPDATE library SET allowed_days = 17 WHERE bno = 5;
-
-DELETE FROM library WHERE bno = 3;
-
-SELECT * FROM library;
-
-SELECT * FROM library_audit;
+-- Check tables
+Select * From library;
+Select * From library_audit;
