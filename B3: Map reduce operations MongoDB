@@ -1,40 +1,82 @@
-show dbs;
-use bill;
+use mapreduce_example;
 
-db.pay.insert({ Cust_ID: "A123", Product: "Milk", Amount: 40, Status: "P" });
-db.pay.insert({ Cust_ID: "A123", Product: "Parle_G", Amount: 50, Status: "NP" });
-db.pay.insert({ Cust_ID: "A123", Product: "Lays Chips", Amount: 40, Status: "P" });
-db.pay.insert({ Cust_ID: "B123", Product: "Mentos", Amount: 10, Status: "P" });
-db.pay.insert({ Cust_ID: "B123", Product: "Maggie", Amount: 60, Status: "NP" });
+db.orders.insertMany([
+    { _id: 1, product: "Pen", category: "Stationery", price: 10, quantity: 5 },
+    { _id: 2, product: "Notebook", category: "Stationery", price: 50, quantity: 3 },
+    { _id: 3, product: "Pencil", category: "Stationery", price: 5, quantity: 10 },
+    { _id: 4, product: "Bag", category: "Accessories", price: 500, quantity: 2 },
+    { _id: 5, product: "Cap", category: "Accessories", price: 150, quantity: 4 }
+]);
 
-db.pay.find().pretty();
-
-db.pay.mapReduce(
-function() { emit(this.Cust_ID, this.Amount); },
-function(key, values) { return Array.sum(values); },
-{ query: { "Status": "NP" }, out: "Bill_Amount" }
-);
-
-db.Bill_Amount.find().pretty();
-
-var mapFunc1 = function() {
-emit(this.Cust_ID, this.Amount);
+// Step 3: Define Map function
+// Emits key-value pairs (category, total revenue)
+var mapFunction = function() {
+    var totalRevenue = this.price * this.quantity;
+    emit(this.category, totalRevenue);
 };
 
-var reduceFunc1 = function(keyCustID, valuePrices) {
-return Array.sum(valuePrices);
+// Step 4: Define Reduce function
+// Sums all revenues for the same category
+var reduceFunction = function(keyCategory, valuesRevenue) {
+    return Array.sum(valuesRevenue);
 };
 
-db.pay.mapReduce(
-mapFunc1,
-reduceFunc1,
-{ out: "Map" }
+// Step 5: Run MapReduce
+db.orders.mapReduce(
+    mapFunction,
+    reduceFunction,
+    {
+        out: "category_revenue"
+    }
 );
 
-db.Map.find().pretty();
+// Step 6: View results
+print("=== Category Revenue ===");
+db.category_revenue.find().forEach(printjson);
 
-db.pay.find().pretty();
 
-db.Bill_Amount.find().pretty();
+//example 2-// ===== MapReduce Example in MongoDB =====
+// Example: Calculate total sales by each product
 
-db.Map.find().pretty();
+db.sales.insertMany([
+  { product: "Laptop", amount: 800, quantity: 2 },
+  { product: "Phone", amount: 500, quantity: 5 },
+  { product: "Laptop", amount: 800, quantity: 1 },
+  { product: "Tablet", amount: 300, quantity: 3 },
+  { product: "Phone", amount: 500, quantity: 2 }
+]);
+
+var mapFunction = function() {
+  emit(this.product, this.amount * this.quantity);
+};
+
+var reduceFunction = function(key, values) {
+  return Array.sum(values);
+};
+
+db.sales.mapReduce(
+  mapFunction,
+  reduceFunction,
+  {
+    out: "total_sales"
+  }
+);
+
+db.total_sales.find().pretty();
+
+//if mam said use aggratae framework
+db.sales.aggregate([
+  {
+    $group: {
+      _id: "$product",
+      totalSales: { $sum: { $multiply: ["$amount", "$quantity"] } }
+    }
+  },
+  {
+    $out: "total_sales"
+  }
+]);
+
+// View result
+db.total_sales.find().pretty();
+
