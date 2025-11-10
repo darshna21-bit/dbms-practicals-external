@@ -1,37 +1,74 @@
-CREATE TABLE stud_marks(name VARCHAR2(25),total_marks NUMBER)
+Drop Table If Exists stud_marks;
+Drop Table If Exists result;
 
-CREATE TABLE result(roll_number NUMBER , name VARCHAR2(25), class VARCHAR2(30))
+Create Table stud_marks (
+    roll_no Int,
+    name Text,
+    total_marks Int
+);
 
-CREATE OR REPLACE PROCEDURE proc_grades ( roll_no IN NUMBER, name IN VARCHAR2 ,marks IN NUMBER)  
-AS    
-BEGIN 
-    IF (marks<=1500 and marks>=990) THEN  
-    DBMS_OUTPUT.PUT_LINE (roll_no||' - '||name||' : DISTINCTION');  
-	INSERT INTO result VALUES (roll_no,name,'DISTINCTION');  
-	ELSIF (marks<=989 and marks>=900) THEN 
-    DBMS_OUTPUT.PUT_LINE (roll_no||' - '||name||' : FIRST CLASS'); 
-    INSERT INTO result VALUES (roll_no,name,'FIRST CLASS'); 
-    ELSIF (marks<=899 and marks>825) THEN          
-    DBMS_OUTPUT.PUT_LINE(roll_no||' - '||name||' : HIGHER SECOND CLASS');  
-    INSERT INTO result VALUES (roll_no,name,'HIGHER SECOND CLASS'); 
-    ELSE 
-    DBMS_OUTPUT.PUT_LINE (roll_no||' - '||name||' : FAIL');  
-    INSERT INTO result VALUES (roll_no,name,'FAIL'); 
-    END IF; 
-    INSERT INTO stud_marks VALUES (name,marks); 
-END proc_grades ;
+Create Table result (
+    roll_no Int,
+    name Text,
+    class Text
+);
 
-BEGIN 
-proc_grades (54,'SUDARSHAN',1000); 
-proc_grades (46,'ARYAN ',950); 
-proc_grades (58,'ARJUN ',1050); 
-proc_grades (14,'Aanika',995); 
-proc_grades (19,'Suhani',889); 
-proc_grades (16,'Kartiki',965); 
-proc_grades (10,'Shalima',400); 
-proc_grades (20,'Kusum',777); 
-END;
+Insert Into stud_marks Values
+(1, 'Ravi', 1200),
+(2, 'Sneha', 950),
+(3, 'Amit', 870);
 
-SELECT * FROM stud_marks;
+-- Stored Function: fn_grade
 
-SELECT * FROM result;
+Create Or Replace Function fn_grade(p_marks Int)
+Returns Text
+Language plpgsql
+As $$
+Declare
+    v_class Text;
+Begin
+    If p_marks >= 990 And p_marks <= 1500 Then
+        v_class := 'Distinction';
+    Elsif p_marks >= 900 And p_marks <= 989 Then
+        v_class := 'First Class';
+    Elsif p_marks >= 825 And p_marks <= 899 Then
+        v_class := 'Higher Second Class';
+    Else
+        v_class := 'Fail';
+    End If;
+
+    Return v_class;
+End;
+$$;
+
+Select fn_grade(950);
+
+-- Stored Procedure: proc_grade
+
+Create Or Replace Procedure proc_grade(p_roll Int)
+Language plpgsql
+As $$
+Declare
+    v_name Text;
+    v_marks Int;
+    v_class Text;
+Begin
+    -- Get student details
+    Select name, total_marks
+    Into v_name, v_marks
+    From stud_marks
+    Where roll_no = p_roll;
+
+    -- Get class using stored function
+    v_class := fn_grade(v_marks);
+
+    Insert Into result Values (p_roll, v_name, v_class);
+    Raise Notice '% -> %', v_name, v_class;
+End;
+$$;
+
+Call proc_grade(1);
+Call proc_grade(2);
+Call proc_grade(3);
+
+Select * From result;
