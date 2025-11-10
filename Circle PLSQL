@@ -1,0 +1,21 @@
+CREATE TABLE areas ( radius NUMERIC(5,2), area   NUMERIC(10,2) );
+DO $$
+DECLARE
+    r NUMERIC := 5;
+    a NUMERIC;
+BEGIN
+    WHILE r <= 9 LOOP
+        a := 3.14 * r * r;
+        INSERT INTO areas (radius, area)
+        VALUES (r, a);
+        RAISE NOTICE 'Radius: %, Area: %', r, a;
+        r := r + 1;
+    END LOOP;
+    RAISE NOTICE 'All records inserted successfully.';
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'Error: %', SQLERRM;
+END;
+$$;
+
+SELECT * FROM areas;
