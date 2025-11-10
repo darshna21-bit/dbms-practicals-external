@@ -83,6 +83,7 @@ SELECT * FROM cust_view;
 
 UPDATE cust_info SET address = 'Mumbai' WHERE id = 4;
 
+DELETE FROM cust_info WHERE id = 3;
 DELETE FROM cust_tab WHERE id = 3;
 
 SELECT * FROM cust_tab;
