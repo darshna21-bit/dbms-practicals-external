@@ -1,36 +1,33 @@
--- Old Roll Call Table
+DROP TABLE IF EXISTS O_RollCall;
+DROP TABLE IF EXISTS N_RollCall;
+
 CREATE TABLE O_RollCall (
     Roll_No INT PRIMARY KEY,
     Name VARCHAR(30),
     Attendance VARCHAR(10)
 );
 
--- New Roll Call Table
 CREATE TABLE N_RollCall (
     Roll_No INT PRIMARY KEY,
     Name VARCHAR(30),
     Attendance VARCHAR(10)
 );
 
--- Insert sample data
-INSERT INTO O_RollCall VALUES (1, 'Ravi', 'Present');
-INSERT INTO O_RollCall VALUES (2, 'Soham', 'Absent');
-INSERT INTO O_RollCall VALUES (3, 'Mohan', 'Present');
+INSERT INTO O_RollCall VALUES
+(1, 'Ravi', 'Present'),
+(2, 'Soham', 'Absent'),
+(3, 'Mohan', 'Present');
 
-INSERT INTO N_RollCall VALUES (2, 'Soham', 'Absent');  -- duplicate
-INSERT INTO N_RollCall VALUES (3, 'Mohan', 'Present'); -- duplicate
-INSERT INTO N_RollCall VALUES (4, 'Omkar', 'Present'); -- new
-INSERT INTO N_RollCall VALUES (5, 'Raj', 'Absent');    -- new
+INSERT INTO N_RollCall VALUES
+(2, 'Soham', 'Absent'),   -- duplicate
+(3, 'Mohan', 'Present'),  -- duplicate
+(4, 'Omkar', 'Present'),  -- new
+(5, 'Raj', 'Absent');     -- new
 
--- ✅ PARAMETERIZED CURSOR PROGRAM
 DO $$
 DECLARE
-    -- Parameterized cursor that takes Roll_No as input
-    CURSOR cur_roll(p_roll INT) IS
-        SELECT Roll_No, Name, Attendance 
-        FROM N_RollCall 
-        WHERE Roll_No = p_roll;
-
+    rec RECORD;       -- for looping through N_RollCall
+    c_rec RECORD;     -- for inner cursor (simulated parameterized cursor)
     v_roll INT;
     v_name VARCHAR(30);
     v_att  VARCHAR(10);
@@ -38,21 +35,26 @@ DECLARE
 BEGIN
     -- Loop through each record in N_RollCall
     FOR rec IN SELECT * FROM N_RollCall LOOP
+
         -- Check if Roll_No already exists in O_RollCall
-        SELECT COUNT(*) INTO v_exists 
-        FROM O_RollCall 
+        SELECT COUNT(*) INTO v_exists
+        FROM O_RollCall
         WHERE Roll_No = rec.Roll_No;
 
         IF v_exists = 0 THEN
-            -- Open parameterized cursor for this Roll_No
-            OPEN cur_roll(rec.Roll_No);
-            FETCH cur_roll INTO v_roll, v_name, v_att;
+            -- Simulated parameterized cursor for Roll_No
+            FOR c_rec IN
+                SELECT Roll_No, Name, Attendance
+                FROM N_RollCall
+                WHERE Roll_No = rec.Roll_No
+            LOOP
+                v_roll := c_rec.Roll_No;
+                v_name := c_rec.Name;
+                v_att  := c_rec.Attendance;
 
-            -- Insert into old table if not present
-            INSERT INTO O_RollCall VALUES (v_roll, v_name, v_att);
-            RAISE NOTICE 'Inserted Roll No: %, Name: %', v_roll, v_name;
-
-            CLOSE cur_roll;
+                INSERT INTO O_RollCall VALUES (v_roll, v_name, v_att);
+                RAISE NOTICE 'Inserted Roll No: %, Name: %', v_roll, v_name;
+            END LOOP;
         ELSE
             RAISE NOTICE 'Skipped Roll No: % (Already Exists)', rec.Roll_No;
         END IF;
@@ -60,5 +62,5 @@ BEGIN
 END
 $$;
 
--- ✅ View final merged table
-SELECT * FROM O_RollCall;
+--  Step 7: View Final Merged Table
+SELECT * FROM O_RollCall ORDER BY Roll_No;
