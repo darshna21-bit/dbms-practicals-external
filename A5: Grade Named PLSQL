@@ -1,78 +1,37 @@
-CREATE DATABASE ScoreDB;
-\c ScoreDB
+CREATE TABLE stud_marks(name VARCHAR2(25),total_marks NUMBER)
 
-CREATE TABLE StudentMarks (
-    name VARCHAR(20),
-    total_marks INT
-);
+CREATE TABLE result(roll_number NUMBER , name VARCHAR2(25), class VARCHAR2(30))
 
-CREATE TABLE StudentResult (
-    roll_no INT PRIMARY KEY,
-    name VARCHAR(20),
-    class VARCHAR(20)
-);
+CREATE OR REPLACE PROCEDURE proc_grades ( roll_no IN NUMBER, name IN VARCHAR2 ,marks IN NUMBER)  
+AS    
+BEGIN 
+    IF (marks<=1500 and marks>=990) THEN  
+    DBMS_OUTPUT.PUT_LINE (roll_no||' - '||name||' : DISTINCTION');  
+	INSERT INTO result VALUES (roll_no,name,'DISTINCTION');  
+	ELSIF (marks<=989 and marks>=900) THEN 
+    DBMS_OUTPUT.PUT_LINE (roll_no||' - '||name||' : FIRST CLASS'); 
+    INSERT INTO result VALUES (roll_no,name,'FIRST CLASS'); 
+    ELSIF (marks<=899 and marks>825) THEN          
+    DBMS_OUTPUT.PUT_LINE(roll_no||' - '||name||' : HIGHER SECOND CLASS');  
+    INSERT INTO result VALUES (roll_no,name,'HIGHER SECOND CLASS'); 
+    ELSE 
+    DBMS_OUTPUT.PUT_LINE (roll_no||' - '||name||' : FAIL');  
+    INSERT INTO result VALUES (roll_no,name,'FAIL'); 
+    END IF; 
+    INSERT INTO stud_marks VALUES (name,marks); 
+END proc_grades ;
 
-INSERT INTO StudentMarks VALUES 
-('Suresh', 995), 
-('Harish', 865), 
-('Samart', 920), 
-('Mohan', 1000), 
-('Soham', 745);
-
-INSERT INTO StudentResult(roll_no, name) VALUES 
-(1, 'Suresh'), 
-(2, 'Harish'), 
-(3, 'Samart'), 
-(4, 'Mohan'), 
-(5, 'Soham');
-
-CREATE OR REPLACE PROCEDURE proc_grade(r INT, OUT grade VARCHAR)
-LANGUAGE plpgsql
-AS $$
-DECLARE 
-    m INT;
-BEGIN
-    SELECT total_marks INTO m 
-    FROM StudentMarks 
-    WHERE name = (SELECT name FROM StudentResult WHERE roll_no = r);
-
-    IF m BETWEEN 990 AND 1500 THEN
-        grade := 'Distinction';
-        UPDATE StudentResult SET class = 'Distinction' WHERE roll_no = r;
-
-    ELSIF m BETWEEN 900 AND 989 THEN
-        grade := 'FirstClass';
-        UPDATE StudentResult SET class = 'FirstClass' WHERE roll_no = r;
-
-    ELSIF m BETWEEN 825 AND 899 THEN
-        grade := 'SecondClass';
-        UPDATE StudentResult SET class = 'SecondClass' WHERE roll_no = r;
-
-    ELSE
-        grade := '--';
-        UPDATE StudentResult SET class = '--' WHERE roll_no = r;
-    END IF;
-
-    RAISE NOTICE 'Student with Roll % has Grade: %', r, grade;
+BEGIN 
+proc_grades (54,'SUDARSHAN',1000); 
+proc_grades (46,'ARYAN ',950); 
+proc_grades (58,'ARJUN ',1050); 
+proc_grades (14,'Aanika',995); 
+proc_grades (19,'Suhani',889); 
+proc_grades (16,'Kartiki',965); 
+proc_grades (10,'Shalima',400); 
+proc_grades (20,'Kusum',777); 
 END;
-$$;
 
-CREATE OR REPLACE FUNCTION func_grade(r INT)
-RETURNS VARCHAR
-LANGUAGE plpgsql
-AS $$
-DECLARE 
-    grade VARCHAR;
-BEGIN
-    CALL proc_grade(r, grade);
-    RETURN grade;
-END;
-$$;
+SELECT * FROM stud_marks;
 
-SELECT func_grade(1);
-SELECT func_grade(2);
-SELECT func_grade(3);
-SELECT func_grade(4);
-SELECT func_grade(5);
-
-SELECT * FROM StudentResult;
+SELECT * FROM result;
