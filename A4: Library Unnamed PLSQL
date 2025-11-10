@@ -1,75 +1,49 @@
-Drop Table If Exists fine;
-Drop Table If Exists borrower;
+CREATE TABLE Borrower( Rollno INT, Name VARCHAR(20), DateofIssue DATE, NameofBook VARCHAR(30), Status CHAR(1) );
 
-Create Table borrower (
-    roll_no      Int,
-    name         Varchar(50),
-    dateofissue  Date,
-    nameofbook   Varchar(100),
-    status       Char(1)  -- 'I' = Issued, 'R' = Returned
-);
+INSERT INTO Borrower VALUES (14,'Ram','2025-09-19','Operating System','I'), (27,'Soham','2025-10-24','Object Oriented Programming','I'), (34,'Mohan','2025-11-06','Microprocessor','I'),(48,'Om','2025-10-19','Mechanics','I');
 
-Create Table fine (
-    roll_no   Int,
-    finedate  Date,
-    amt       Numeric(10)
-);
+CREATE TABLE Fine(Rollno INT, Date DATE, Amount INT );
+DO $$
+DECLARE
+    roll INT := 14;  -- assign manually (since no parameters)
+    book_n VARCHAR := 'Operating System';
+    doi DATE;
+    diff INT;
+    fine_amt INT := 0;
+BEGIN
+    SELECT DateofIssue INTO doi
+    FROM Borrower
+    WHERE Rollno = roll AND NameofBook = book_n AND Status = 'I';
 
-Insert Into borrower Values
-(1, 'Ravi',  Current_Date - Interval '20 days', 'DBMS Book', 'I'),
-(2, 'Sneha', Current_Date - Interval '40 days', 'Java Book', 'I'),
-(3, 'Amit',  Current_Date - Interval '10 days', 'SQL Book', 'I');
+    IF NOT FOUND THEN
+        RAISE NOTICE 'No book found for Roll No: % and Book: %', roll, book_n;
+        RETURN;
+    END IF;
 
-Do $$
-Declare
-    v_rollno      Int := 1;            -- you can change to test
-    v_book        Text := 'DBMS Book'; -- you can change to test
-    v_dateofissue Date;
-    v_days        Int;
-    v_fine        Numeric := 0;
-Begin
-    -- Try to fetch the issue date
-    Begin
-        Select dateofissue Into v_dateofissue
-        From borrower
-        Where roll_no = v_rollno
-          And nameofbook = v_book
-          And status = 'I';
-    Exception
-        When no_data_found Then
-            Raise Notice 'Error: No record found for given Roll_no and Book.';
-            Return;
-    End;
+    diff := CURRENT_DATE - doi;
 
-    -- Calculate days
-    v_days := (Current_Date - v_dateofissue);
+    IF diff BETWEEN 15 AND 30 THEN
+        fine_amt := diff * 5;
+    ELSIF diff > 30 THEN
+        fine_amt := diff * 50;
+    ELSE
+        fine_amt := 0;
+    END IF;
 
-    -- Fine logic
-    If v_days > 30 Then
-        v_fine := v_days * 50;
-    Elsif v_days >= 15 Then
-        v_fine := v_days * 5;
-    Else
-        v_fine := 0;
-    End If;
+    IF fine_amt > 0 THEN
+        INSERT INTO Fine(Rollno, Date, Amount)
+        VALUES (roll, CURRENT_DATE, fine_amt);
+    END IF;
 
-    Update borrower
-    Set status = 'R'
-    Where roll_no = v_rollno
-      And nameofbook = v_book;
+    UPDATE Borrower SET Status = 'R' WHERE Rollno = roll AND NameofBook = book_n;
 
-    If v_fine > 0 Then
-        Insert Into fine Values (v_rollno, Current_Date, v_fine);
-    End If;
+    RAISE NOTICE 'Book submitted successfully for Roll No: %, Fine: %', roll, fine_amt;
 
-    Raise Notice 'Book returned successfully.';
-    Raise Notice 'Days kept: %', v_days;
-    Raise Notice 'Fine: Rs %', v_fine;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'Unexpected error occurred!';
+END;
+$$;
 
-Exception
-    When Others Then
-        Raise Notice 'Unexpected error occurred: %', Sqlerrm;
-End $$;
-
-Select * From borrower;
-Select * From fine;
+SELECT * FROM Fine;
+select * from Borrower;
