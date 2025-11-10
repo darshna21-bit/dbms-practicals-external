@@ -1,66 +1,36 @@
-DROP TABLE IF EXISTS O_RollCall;
-DROP TABLE IF EXISTS N_RollCall;
+CREATE TABLE O_RollCall ( Roll INT PRIMARY KEY, Name VARCHAR(30),Class VARCHAR(10));
 
-CREATE TABLE O_RollCall (
-    Roll_No INT PRIMARY KEY,
-    Name VARCHAR(30),
-    Attendance VARCHAR(10)
-);
+CREATE TABLE N_RollCall (Roll INT,Name VARCHAR(30),Class VARCHAR(10));
 
-CREATE TABLE N_RollCall (
-    Roll_No INT PRIMARY KEY,
-    Name VARCHAR(30),
-    Attendance VARCHAR(10)
-);
+INSERT INTO O_RollCall VALUES (1, 'Ram', 'FY'),(2, 'Sita', 'SY'),(3, 'Om', 'TY');
 
-INSERT INTO O_RollCall VALUES
-(1, 'Ravi', 'Present'),
-(2, 'Soham', 'Absent'),
-(3, 'Mohan', 'Present');
+INSERT INTO N_RollCall VALUES (2, 'Sita', 'SY'),(3, 'Om', 'TY'),(4, 'Mohan', 'FY'),(5, 'Soham', 'TY');     
 
-INSERT INTO N_RollCall VALUES
-(2, 'Soham', 'Absent'),   -- duplicate
-(3, 'Mohan', 'Present'),  -- duplicate
-(4, 'Omkar', 'Present'),  -- new
-(5, 'Raj', 'Absent');     -- new
-
-DO $$
+CREATE OR REPLACE FUNCTION merge_rollcalls()
+RETURNS void AS $$
 DECLARE
-    rec RECORD;       -- for looping through N_RollCall
-    c_rec RECORD;     -- for inner cursor (simulated parameterized cursor)
-    v_roll INT;
-    v_name VARCHAR(30);
-    v_att  VARCHAR(10);
-    v_exists INT;
+    v_roll  INT;
+    v_name  VARCHAR(30);
+    v_class VARCHAR(10);
+    c1 CURSOR (p_roll INT) FOR
+        SELECT Roll FROM O_RollCall WHERE Roll = p_roll;
+    rec RECORD;
 BEGIN
-    -- Loop through each record in N_RollCall
-    FOR rec IN SELECT * FROM N_RollCall LOOP
+    FOR rec IN SELECT * FROM N_RollCall LOOP
+        OPEN c1(rec.Roll);
+        FETCH c1 INTO v_roll;
+        IF NOT FOUND THEN
+            INSERT INTO O_RollCall VALUES (rec.Roll, rec.Name, rec.Class);
+            RAISE NOTICE 'Inserted Roll: %, Name: %', rec.Roll, rec.Name;
+        ELSE
+            RAISE NOTICE 'Skipped duplicate Roll: %', rec.Roll;
+        END IF;
+        CLOSE c1;
+    END LOOP;
+    RAISE NOTICE 'Merge complete!';
+END;
+$$ LANGUAGE plpgsql;
 
-        -- Check if Roll_No already exists in O_RollCall
-        SELECT COUNT(*) INTO v_exists
-        FROM O_RollCall
-        WHERE Roll_No = rec.Roll_No;
+SELECT merge_rollcalls();
 
-        IF v_exists = 0 THEN
-            -- Simulated parameterized cursor for Roll_No
-            FOR c_rec IN
-                SELECT Roll_No, Name, Attendance
-                FROM N_RollCall
-                WHERE Roll_No = rec.Roll_No
-            LOOP
-                v_roll := c_rec.Roll_No;
-                v_name := c_rec.Name;
-                v_att  := c_rec.Attendance;
-
-                INSERT INTO O_RollCall VALUES (v_roll, v_name, v_att);
-                RAISE NOTICE 'Inserted Roll No: %, Name: %', v_roll, v_name;
-            END LOOP;
-        ELSE
-            RAISE NOTICE 'Skipped Roll No: % (Already Exists)', rec.Roll_No;
-        END IF;
-    END LOOP;
-END
-$$;
-
---  Step 7: View Final Merged Table
-SELECT * FROM O_RollCall ORDER BY Roll_No;
+SELECT * FROM O_RollCall;
