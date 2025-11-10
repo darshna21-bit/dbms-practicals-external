@@ -1,51 +1,73 @@
+use p1;
+db.createCollection("students");
+
+db.students.insertOne({
+  name: "Aarav",
+  age: 20,
+  course: "Computer Science",
+  marks: 85
+});
+
+db.students.insertMany([
+  { name: "Riya", age: 22, course: "IT", marks: 91 },
+  { name: "Karan", age: 19, course: "AI", marks: 78 },
+  { name: "Priya", age: 21, course: "Data Science", marks: 88 },
+  { name: "Neha", age: 23, course: "IT", marks: 95 }
+]);
+
+db.students.find();
+
+db.students.find({ course: "IT" });
+
+db.students.find({ marks: { $gt: 80 } });
+
+db.students.find({
+  $and: [
+    { course: "IT" },
+    { marks: { $gt: 85 } }
+  ]
+});
+
+db.students.find({
+  $or: [
+    { course: "AI" },
+    { marks: { $lt: 80 } }
+  ]
+});
+
+db.students.updateOne(
+  { name: "Aarav" },
+  { $set: { marks: 90 } }
+);
+
+db.students.updateMany(
+  { course: "IT" },
+  { $set: { course: "Information Technology" } }
+);
+db.students.deleteOne({ name: "Karan" });
+
+db.students.deleteMany({ marks: { $lt: 80 } });
+
+db.students.insertOne({
+  name: "Meera",
+  age: 24,
+  course: "AI",
+  marks: 92
+});
+
+db.students.find({ marks: { $gte: 85 } });
+
+db.students.find({ age: { $lte: 22 } });
+
+db.students.find({ course: { $ne: "Data Science" } });
+
+db.students.find({
+  $and: [
+    { marks: { $gt: 80 } },
+    { age: { $lt: 23 } }
+  ]
+});
+
 show dbs;
-use book;
 show collections;
-db.createCollection("library");
-
-db.library.insertOne({ "bid": 1, "name": "C++" });
-db.library.insertOne({ "bid": 2, "name": "SEPM", "author": "Pressman" });
-db.library.insertOne({ "bid": 3, "name": "CN", "author": "Forouzan", "cost": 700 });
-
-db.library.find().pretty();
-
-db.library.deleteOne({ "bid": 1 });
-
-db.library.countDocuments();
-
-db.library.find().pretty();
-
-db.library.insert({ "bid": 1, "name": "C++" });
-
-db.library.find().pretty();
-
-db.library.find().sort({ "bid": 1 });
-
-db.library.insert({ "bid": 4, "name": "SPOS", "author": "Pearson", "cost": 500 });
-
-db.library.find().sort({ "bid": 1 });
-
-db.library.find({ $and: [{ "name": "CN" }, { "cost": 700 }] }).pretty();
-
-db.library.insert({ "bid": 5, "name": "TOC", "author": "Addison-Wesley", "cost": 600 });
-db.library.insert({ "bid": 6, "name": "AI", "author": "McGraw Hill Education", "cost": 800 });
-
-db.library.find().pretty();
-
-db.library.find({ $or: [{ "cost": 500 }, { "cost": 800 }] }).pretty();
-
-db.library.find({ "cost": { $ne: 500 } });
-
-db.library.find({ $nor: [{ "cost": 500 }, { "author": "Forouzan" }] });
-
-db.library.find({ "cost": { $not: { $gt: 800 } } });
-
-db.library.insert({ "bid": 7, "name": "CC", "author": "Wiley Publications", "cost": 400 });
-
-db.library.find().pretty();
-
-db.library.updateOne({ "cost": 400 }, { $set: { "cost": 600 } });
-
-db.library.updateOne({ "cost": 800 }, { $set: { "cost": 1200 } });
-
-db.library.find().pretty();
+db.students.find().pretty();
