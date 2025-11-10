@@ -30,6 +30,7 @@ create view emp_view2 as select * from emp_details where emp_dept="designing";
 select * from emp_view1;
 select * from emp_view2;
 
+SET SQL_SAFE_UPDATES = 0;    
 update emp_details set emp_dept="coding" where emp_name="Mohan";
 
 select * from emp_details;
